@@ -68,7 +68,7 @@ This project aligns with the following UN Sustainable Development Goals:
 
 ---
 
-##  metodology Methodology & Approach
+## Methodology & Approach
 
 ### Initial Steps:
 1.  **Modeling** (Filipi, Mariana):
