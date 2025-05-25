@@ -1,0 +1,9 @@
+A IBM, uma das maiores empresas de tecnologia, lançou o seguinte slogan para seu software de in-
+teligência artificial (IA). "inteligência pronta para trabalhar". De tal frase, subentende-se que a máquina
+produz de acordo com o direcionamento do cliente e, por ser uma máquina, não tem falhas humanas, doen-
+ças ou licença maternidade, --em que-- e, mais importante: não questiona. A introdução da IA na medicina ca-
+minha a passos largos, sendo atualmente utilizada para diagnóstico de imagem com certa precisão. Há quem
+diga que ela irá superar o papel do médico por ser mais rápida e produtiva; entretanto, essa visão não con-
+sidera que a IA é alimentada por dados criado por médicos, como também não possui a interação humana
+que auxilia na avaliação do paciente. Dessa forma, a IA é apenas um recurso e cabe ao médico a responsabi-
+lidade ética sobre o diagnóstico.

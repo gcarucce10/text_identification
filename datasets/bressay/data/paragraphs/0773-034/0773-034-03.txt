@@ -1,0 +1,7 @@
+Quando a inteligência utiliza dados e informação geradas por médicos, não se pode assumi-la como
+autônoma. Ainda que a lA apresente "machine learning", ou aprendizado da máquina" e, assim, possa se autoeducar,
+ela deriva de um banco de dados feito por pessoas. Logo, a responsabilidade acaba sendo de quem a alimenta
+com o conteúdo a ser processado. O software, portanto, não tem a autonomia no sentido de questionar a fonte ou, até
+mesmo, ler corretamente um prontúario, pois se limita ao que lhe é fornecido. Por outro lado, o médico tem a capacida-
+de de --xxx-- corrigir erros de leitura e --xxx-- descutir com outros profissionais da saúde casos clínicos, podendo
+assim, aperfeiçoar a máquina. A IA, portanto, pode ser aprimorada, mas tal feito deriva da conduta do médico.

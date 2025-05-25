@@ -1,0 +1,6 @@
+Assim, ainda que a IA tenha alto processamento e precisão, ela é alimentada apenas por dados
+feitos por pessoas. Isso a faz uma "inteligência pronta para trabalhar", mas apenas como ferramenta e
+recurso em diagnóstico, não podendo ser responsável por ele. O médico, porém, consegue verificar sinais
+que a máquina não consegue, e, também questioná-la quanto ao diagnóstico. Isso a torna --xxx-- ética-
+mente responsável pelo diagnóstico e pelo paciente, e, portanto ele deve carimbar e assinar embaixo as
+suas escolhas.
