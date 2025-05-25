@@ -71,7 +71,7 @@ This project aligns with the following UN Sustainable Development Goals:
 ##  metodology Methodology & Approach
 
 ### Initial Steps:
-1.  **Modeling** (Filipi, Mariana)[cite: 18]:
+1.  **Modeling** (Filipi, Mariana):
     * Selection of models with the highest implementation viability from the bibliography.
     * Initial implementation of models using PyTorch/TensorFlow + Keras.
     * Definition of a basic/rudimentary pipeline to obtain initial results.
