@@ -1,8 +1,0 @@
-Conforme referido anteriormente, a nossa Carta Magna - tal qual a Declaração dos Direitos Humanos da ONU - determina
-a paridade dos direitos de todos os homens e mulheres; dentre eles estão renda, saúde, educação e habitação: conside-
-rados como exigências mínimas à dignidade humana. Todavia, haja visto que, de acordo com o IBGE, todos os estados do
-Norte e do Nordeste do Brasil apresentam IDHs - ##valor## --indices-- que mensura a qualidade de vida através de dados relacionados
-à ##escolaridade## --xxx--, à saúde e à renda - inferiores aos índices de --xxx-- qualquer outra Unidade Federativa ##(UF)## --AF-- nacional, torna-se
-evidente a omissão do Estado em garantir ##à população## os dois pilares fundamentais da Constituição Cidadã: ##a## universalidade e ##a## igualdade. Ademais,
-cabe destacar que as UFs com menor renda "per capita" estão todas localizadas na metade norte do país, ou seja, ##esse é## mais um indica-
-tivo de que a paridade de tratamento entre cidadãos é uma ##mera## ilusão.
