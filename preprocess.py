@@ -117,7 +117,7 @@ def StandardPreprocess_image(imagem_entrada, new_size=None, shear_x=0.0, shear_y
     # Aplica redimensionalizacao
     imagem = resize_image(imagem, new_size[0], new_size[1])
     # Aplica escala, se passado como parametro
-    scalers_dict = {"standard"=StandardScaler_image, "uniform"=UniformScaler_image}
+    scalers_dict = {"standard": StandardScaler_image, "uniform": UniformScaler_image}
     if scaler in [key for key in scalers_dict.keys()]:
         imagem = scalers_dict[scaler](imagem)
     

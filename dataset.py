@@ -1,4 +1,6 @@
 import os
+from PIL import Image
+import numpy as np
 
 class Dataset:
     # TODO: ver como faz acesso a diretorio compativel com linux E windows (os.pathjoin ou coisa assim)
@@ -12,6 +14,30 @@ class Dataset:
         self.charset      = file.read()
         file.close()
     
+    def load_train(self):
+        train_set = []
+        for i in range(self.n_train):
+            image = Image.open(f'train/{str(i)}.png')
+            # TODO: ver questao do reshape pra input de CNN
+            train_set.append(np.array(image))
+        return train_set
+
+    def load_test(self):
+        test_set = []
+        for i in range(self.n_test):
+            image = Image.open(f'test/{str(i)}.png')
+            # TODO: ver questao do reshape pra input de CNN
+            test_set.append(np.array(image))
+        return test_set
+
+    def load_validation(self):
+        validation_set = []
+        for i in range(self.n_validation):
+            image = Image.open(f'validation/{str(i)}.png')
+            # TODO: ver questao do reshape pra input de CNN
+            validation_set.append(np.array(image))
+        return validation_set
+
     def encode(self, text):
         encoded = [int(self.charset.index(char)) for char in text]
         return encoded
@@ -40,4 +66,3 @@ if __name__=='__main__':
     print(f'Texto:  {text}')
     print(f'Encode: {text_encoded}')
     print(f'Decode: {text_decoded}')
-
