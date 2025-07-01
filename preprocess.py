@@ -1,62 +1,138 @@
 from PIL import Image
 import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy.ndimage import zoom
 
-def resize_image(imagem_entrada, new_x, new_y):
-    '''
+def resize_image(input_image, new_x, new_y):
+    """
     Redimensiona uma imagem para as dimensões especificadas.
     Parâmetros:
-    - imagem_entrada: Caminho da imagem ou objeto PIL.Image
-    - new_x:          Nova largura desejada (em pixels)
-    - new_y:          Nova altura desejada (em pixels)
-    '''
-    # Abrir a imagem se for uma string (caminho)
-    if isinstance(imagem_entrada, str):
-        imagem = Image.open(imagem_entrada)
+    - input_image: Caminho da imagem, objeto PIL.Image ou np.array
+    - new_x: Nova largura desejada (em pixels)
+    - new_y: Nova altura desejada (em pixels)
+    
+    Retorna:
+    - np.array: Imagem redimensionada como array numpy
+    """
+    # Converter entrada para numpy array
+    if isinstance(input_image, str):
+        # Carregar imagem do arquivo
+        imagem_pil = Image.open(input_image)
+        image_array = np.array(imagem_pil)
+    elif isinstance(input_image, Image.Image):
+        # Converter PIL Image para numpy array
+        image_array = np.array(input_image)
+    elif isinstance(input_image, np.ndarray):
+        # Já é um numpy array
+        image_array = input_image
     else:
-        imagem = imagem_entrada
+        raise ValueError("Tipo de entrada não suportado. Use string (caminho), PIL.Image ou np.array")
+    
+    # Obter dimensões atuais
+    current_height, current_width = image_array.shape[:2]
+    
+    # Calcular fatores de escala
+    scale_y = new_y / current_height
+    scale_x = new_x / current_width
+    
+    # Aplicar redimensionamento
+    if len(image_array.shape) == 3:  # Imagem colorida (altura, largura, canais)
+        scale_factors = (scale_y, scale_x, 1)
+    else:  # Imagem em escala de cinza (altura, largura)
+        scale_factors = (scale_y, scale_x)
+    
+    # Usar zoom do scipy para redimensionar
+    resized_image = zoom(image_array, scale_factors, order=3)  # order=3 para interpolação cúbica
+    
+    # Garantir que o tipo de dados seja preservado
+    return resized_image.astype(image_array.dtype)
 
-    imagem_redimensionada = imagem.resize((new_x, new_y), Image.ANTIALIAS)
-    return imagem_redimensionada
 
-def shear_image(imagem_entrada, shear_x=0.0, shear_y=0.0):
-    '''
-    Aplica uma transformação de cisalhamento (shear) à imagem.
-    Parâmetros:
-    - imagem_entrada: Caminho da imagem ou objeto PIL.Image
-    - shear_x:        Fator de cisalhamento horizontal (em radianos ou tangente do ângulo desejado)
-    - shear_y:        Fator de cisalhamento vertical (idem)
-    '''
-    # Abrir a imagem se for um caminho
-    if isinstance(imagem_entrada, str):
-        imagem = Image.open(imagem_entrada)
+import numpy as np
+from scipy.ndimage import affine_transform
+
+def shear_image_centered(image_array, shear_x=0, shear_y=0):
+  """
+  Aplica um cisalhamento (shearing) a uma imagem representada por um np.array,
+  ajustando as dimensões para conter toda a imagem transformada.
+
+  Args:
+    image_array (np.array): O array numpy representando a imagem.
+    shear_x (float): O fator de cisalhamento na direção x.
+    shear_y (float): O fator de cisalhamento na direção y.
+
+  Returns:
+    np.array: O array numpy da imagem cisalhada com dimensões ajustadas.
+  """
+  # Verificar se a imagem é colorida ou em escala de cinza
+  is_color = len(image_array.shape) == 3
+  
+  if is_color:
+    rows, cols, channels = image_array.shape
+
+    # Determinante da matriz de cisalhamento
+    det = 1 - shear_x * shear_y
+    if abs(det) < 1e-10:
+        raise ValueError("Shear values result in a singular matrix (cannot be inverted).")
+
+    # Matriz de cisalhamento (forward transformation)
+    shear_matrix = np.array([[1, shear_x],
+                            [shear_y, 1]])
+
+    # Calcular os cantos da imagem original
+    corners = np.array([
+        [0, 0],           # canto superior esquerdo
+        [cols, 0],        # canto superior direito
+        [0, rows],        # canto inferior esquerdo
+        [cols, rows]      # canto inferior direito
+    ])
+
+    # Transformar os cantos para encontrar a bounding box
+    transformed_corners = corners @ shear_matrix.T
+
+    # Encontrar os limites da imagem transformada
+    min_x = np.floor(np.min(transformed_corners[:, 0]))
+    max_x = np.ceil(np.max(transformed_corners[:, 0]))
+    min_y = np.floor(np.min(transformed_corners[:, 1]))
+    max_y = np.ceil(np.max(transformed_corners[:, 1]))
+
+    # Calcular novas dimensões
+    new_cols = int(max_x - min_x)
+    new_rows = int(max_y - min_y)
+
+    # Matriz de cisalhamento inversa (para scipy)
+    inv_shear_matrix = (1 / det) * np.array([[1, -shear_x],
+                                            [-shear_y, 1]])
+
+    # Calcular offset para posicionar a imagem na nova canvas
+    if shear_x > 0:
+        offset_x = -min_x
     else:
-        imagem = imagem_entrada
+        offset_x = min_x
+    if shear_y > 0:
+        offset_y = -min_y
+    else: 
+        offset_y = min_y
 
-    largura, altura = imagem.size
+    # Offset total para scipy (que usa transformação inversa)
+    total_offset = np.array([offset_x, offset_y])
 
-    # Matriz de transformação afim (6 valores):
-    # (a, b, c, d, e, f) → aplica a transformação:
-    # x' = a*x + b*y + c
-    # y' = d*x + e*y + f
-    matriz_afim = (
-        1, shear_x, 0,  # primeira linha: afeta o eixo X
-        shear_y, 1, 0   # segunda linha: afeta o eixo Y
-    )
+    # Criar array de resultado com as dimensões corretas
+    result = np.zeros((new_rows, new_cols, channels), dtype=image_array.dtype)
 
-    # Calcula novo tamanho para evitar corte da imagem
-    nova_largura = int(largura + abs(shear_x) * altura)
-    nova_altura = int(altura + abs(shear_y) * largura)
+    # Aplicar transformação em cada canal
+    for channel in range(channels):
+        result[:, :, channel] = affine_transform(
+            image_array[:, :, channel],
+            matrix=inv_shear_matrix,
+            offset=total_offset,
+            output_shape=(new_rows, new_cols),
+            mode='constant',
+            cval=0,
+            order=3
+        )
 
-    imagem_cisalhada = imagem.transform(
-        (nova_largura, nova_altura),
-        Image.AFFINE,
-        matriz_afim,
-        resample=Image.BICUBIC,
-        fillcolor=(255, 255, 255)  # Fundo branco
-    )
+    return result.astype(image_array.dtype)
 
-    return imagem_cisalhada
 
 def StandardScaler_image(imagem_entrada):
     '''
@@ -113,7 +189,7 @@ def StandardPreprocess_image(imagem_entrada, new_size=None, shear_x=0.0, shear_y
     if new_size == None:
         new_size = imagem.size
     # Aplica cisalhamento
-    imagem = shear_image(imagem, shear_x, shear_y)
+    imagem = shear_image_centered(imagem, shear_x, shear_y)
     # Aplica redimensionalizacao
     imagem = resize_image(imagem, new_size[0], new_size[1])
     # Aplica escala, se passado como parametro
