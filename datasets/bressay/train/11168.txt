@@ -1,1 +1,0 @@
-voltada para os procedimentos, não para os resultados, ou seja, o Estado preocupa-se com a exis-
