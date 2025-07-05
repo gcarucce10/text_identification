@@ -1,6 +1,4 @@
 import os
-from abc import ABC
-
 import numpy as np
 import cv2
 
@@ -11,7 +9,6 @@ from tensorflow.keras.layers import Conv2D, Multiply, Activation
 from tensorflow.keras.layers import Conv2D, Bidirectional, LSTM, Dense
 from tensorflow.keras.layers import Input, Activation, MaxPooling2D, Reshape
 
-# Custom layers / tools 
 # Implementation from "Gated convolutional recurrent neural networks for multilingual handwriting recognition".
 class GatedConv2D(Conv2D):
     """Gated Convolutional Class"""
@@ -34,7 +31,6 @@ class GatedConv2D(Conv2D):
         config = super(GatedConv2D, self).get_config()
         return config
 
-# TODO: get source
 class NormalizedOptimizer(tf.keras.optimizers.Optimizer):
     def __init__(self, optimizer, name='normalized_optimizer', **kwargs):
         super().__init__(name, **kwargs)
@@ -74,107 +70,101 @@ def ctc_loss_lambda_func(y_true, y_pred):
 
     return ctc_loss
 
+def bluche(input_size=(1024, 128, 1), d_model=101):
+    """
+    Gated Convolucional Recurrent Neural Network by Bluche et al.
 
-# Abstract class for generic HTR NN model
-class HTRModel(ABC):
-    # NEEDS IMPLEMENTING
-    # Responsible for loading the model into self.model (kerasmodel) and charset into self.charset (str)
-    # After __init__, self.model.predict(x) should already be working
-    def __init__(self):
-        pass
+    Reference:
+        Bluche, T., Messina, R.:
+        Gated convolutional recurrent neural networks for multilingual handwriting recognition.
+        In: Document Analysis and Recognition (ICDAR), 2017
+        14th IAPR International Conference on, vol. 1, pp. 646–651, 2017.
+        URL: https://ieeexplore.ieee.org/document/8270042
+    """
 
-    # READY AS IS
-    # Recieves text in model's encoding and decode it according to self.charset (removing pad. and unk. tokens)
-    def decode(self, text, pad="¶", unk="¤"):
-        decoded = "".join([self.charset[int(x)] for x in text if x > -1])
-        decoded = decoded.replace(pad, "").replace(unk, "")
-        return decoded
+    input_data = Input(name="input", shape=input_size)
+    cnn = Reshape((input_size[0] // 2, input_size[1] // 2, input_size[2] * 4))(input_data)
 
-    # NEEDS IMPLEMENTING
-    # Calls self.predict
-    def predict(self, image_list):
-        pass
+    cnn = Conv2D(filters=8, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
 
-# Class for custom bluche model trained on bressay
-class Bluche(HTRModel):
-    # Needed for building bluche model
-    def architecture(self, input_size=(1024, 128, 1), d_model=101):
-        """
-        Gated Convolucional Recurrent Neural Network by Bluche et al.
+    cnn = Conv2D(filters=16, kernel_size=(2, 4), strides=(2, 4), padding="same", activation="tanh")(cnn)
+    cnn = GatedConv2D(filters=16, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
 
-        Reference:
-            Bluche, T., Messina, R.:
-            Gated convolutional recurrent neural networks for multilingual handwriting recognition.
-            In: Document Analysis and Recognition (ICDAR), 2017
-            14th IAPR International Conference on, vol. 1, pp. 646–651, 2017.
-            URL: https://ieeexplore.ieee.org/document/8270042
-        """
+    cnn = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
+    cnn = GatedConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
 
-        input_data = Input(name="input", shape=input_size)
-        cnn = Reshape((input_size[0] // 2, input_size[1] // 2, input_size[2] * 4))(input_data)
+    cnn = Conv2D(filters=64, kernel_size=(2, 4), strides=(1, 4), padding="same", activation="tanh")(cnn)
+    cnn = GatedConv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
 
-        cnn = Conv2D(filters=8, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
+    cnn = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
+    cnn = MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding="valid")(cnn)
 
-        cnn = Conv2D(filters=16, kernel_size=(2, 4), strides=(2, 4), padding="same", activation="tanh")(cnn)
-        cnn = GatedConv2D(filters=16, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
+    # This was originally "shape = cnn.get_shape()""
+    shape = cnn.get_shape()
+    blstm = Reshape((shape[1], shape[2] * shape[3]))(cnn)
 
-        cnn = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
-        cnn = GatedConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
+    blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
+    blstm = Dense(units=128, activation="tanh")(blstm)
 
-        cnn = Conv2D(filters=64, kernel_size=(2, 4), strides=(1, 4), padding="same", activation="tanh")(cnn)
-        cnn = GatedConv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(cnn)
+    blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
+    output_data = Dense(units=d_model, activation="softmax")(blstm)
 
-        cnn = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
-        cnn = MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding="valid")(cnn)
+    # NAO TIRA OS PARENTESES
+    return (input_data, output_data)
 
-        # This was originally "shape = cnn.get_shape()""
-        shape = cnn.get_shape()
-        blstm = Reshape((shape[1], shape[2] * shape[3]))(cnn)
 
-        blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
-        blstm = Dense(units=128, activation="tanh")(blstm)
+class HTRModel:
+    param_dict = {
+        "bluche": dict(architecture=bluche,weights="resources/bluche_bressay_weights.hdf5",charset="resources/bluche_bressay_charset.txt")
+    }
 
-        blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
-        output_data = Dense(units=d_model, activation="softmax")(blstm)
-
-        # NAO TIRA OS PARENTESES
-        return (input_data, output_data)
-
-    def __init__(self, weigths_path="resources/bluche_bressay_weights.hdf5", charset_path="resources/bluche_bressay_charset.txt"):
+    def __init__(self, param = "bluche"):
+        # Loads charset
+        with open(f'resources/bluche_bressay_charset.txt','r') as f:
+            self.charset = f.readline()
+        # NAO MUDAR
         # Loads model with custom layers and optimizer
-        #(input_data, output_data) = self.architecture()
-        (input_data, output_data) = self.architecture()
+        (input_data, output_data) = self.param_dict[param]["architecture"]()
         self.model     = Model(input_data, output_data)
         self.optimizer = NormalizedOptimizer(tf.keras.optimizers.AdamW(learning_rate=0.001, weight_decay=0.1))
         self.model.compile(optimizer=self.optimizer, loss=ctc_loss_lambda_func)
-        self.model.load_weights(weigths_path)
+        self.model.load_weights(self.param_dict[param]["weights"])
         # Loads model charset for output decoding
-        with open(charset_path,'r') as file:
-            self.charset = file.read()
+        #file = open(self.param_dict[param]["charset"], 'r')
+        #self.charset = str(file.read())
+        #file.close()
+
+    def decode(self, text):
+        decoded = "".join([self.charset[int(x)] for x in text if x > -1])
+        decoded = decoded.replace("¶", "").replace("¤", "")
+        return decoded
 
     def predict(self, image_list):
         # Get model output
         output = self.model.predict(image_list)
 
         # CTC decode
-        #batch_size = int(np.ceil(len(output) / 1))
+        batch_size = int(np.ceil(len(output) / 1))
         input_length = len(max(output, key=len))
 
         predicts, probabilities = [], []
 
-        #index = 0
-        #until = batch_size
-        #until = len(output)
-        #x_test = np.asarray(output[index:until])
-        x_test = np.asarray(output)
+        index = 0
+        until = batch_size
+        x_test = np.asarray(output[index:until])
         x_test_len = np.asarray([input_length for _ in range(len(x_test))])
-        decode, log = K.ctc_decode(x_test,x_test_len,greedy=False,beam_width=10,top_paths=1)
+        decode, log = K.ctc_decode(x_test,
+                                   x_test_len,
+                                   greedy=False,
+                                   beam_width=10,
+                                   top_paths=1)
         decode = np.swapaxes(decode, 0, 1)
         predicts.extend([[[int(p) for p in x if p != -1] for x in y] for y in decode])
         probabilities.extend([np.exp(x) for x in log])
         predicts = [[self.decode(x) for x in y] for y in predicts]
         return (predicts, probabilities)
 
+    
 
 # TODO: Testes de funcionalidade
 if __name__=='__main__':
@@ -206,8 +196,12 @@ if __name__=='__main__':
         img_list = np.asarray(img_list).astype(np.float32)
         return np.expand_dims(img_list, axis=-1)
     
-    model    = Bluche()
+    model    = HTRModel("bluche")
     model.model.summary()
     img      = preproc(['test/model/inputs/line1.png'])
+    #print(f'After preproc: {img.shape}')
+    #print(img[0])
+    #cv2.imwrite('test/model/outputs/test_input.png', (img[0]*255).astype(np.uint8))
     predicts = model.predict(img)
     print(predicts[0])
+    

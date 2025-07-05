@@ -20,6 +20,12 @@ def normalize_image(input_image):
     std   = np.std(image)
     return (image - mean) / std
 
+
+#TODO: different generalization?
+# steps_dict = dict("key": [func1, func2...])
+# param_dict = dict("key": [{params1}, {params2}])
+# for ...
+#   img = steps_dict["key"][i](img, **param_dict["key"][i])
 # Main class for Handwritten Text Recognition Preprocessing
 class HTRPreprocessor:
     # Dictionary of process() params for easy selecting
@@ -33,12 +39,14 @@ class HTRPreprocessor:
         elif isinstance(params, dict):
             self.params = params
 
-    # TODO: Handle paragraph case
+    # TODO: Handle paragraph case with line segmentation
     # Recieves list of images (as [np.array]) and return list of processed images, (as [np.array.astype(self.astype)])
     # Preprocesses according to params specified in builder (self.params_dict or custom dict as input)
     def process(self, image_list):
         processed_images = []
         for image in image_list:
+            if isinstance(image, str):
+                image = cv2.imread(image)
             # Handles change in channels
             if self.params["new_size"][2] == 1:
                 image = to_gray_scale(image)
@@ -50,6 +58,7 @@ class HTRPreprocessor:
                 image = normalize_image(image)
             processed_images.append(image.astype(self.params["astype"]))
         return processed_images
+
 
 # TODO: fix for windows file pathing
 # # Functionality tests

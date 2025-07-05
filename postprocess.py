@@ -83,6 +83,7 @@ class HTRPostprocessing:
     def process(self, text_list):
         return [self.postprocessor(text) for text in text_list]
 
+
 # Functionality tests
 if __name__ == "__main__":
     def carregar_frases(caminho_arquivo):
