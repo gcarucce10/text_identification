@@ -91,7 +91,7 @@ class HTRModel(ABC):
         return decoded
 
     # NEEDS IMPLEMENTING
-    # Calls self.predict
+    # Calls self.predict. By convention, recieves list and returns list of outputs
     def predict(self, image_list):
         pass
 
@@ -137,12 +137,10 @@ class Bluche(HTRModel):
         blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
         output_data = Dense(units=d_model, activation="softmax")(blstm)
 
-        # NAO TIRA OS PARENTESES
         return (input_data, output_data)
 
     def __init__(self, weigths_path="resources/bluche_bressay_weights.hdf5", charset_path="resources/bluche_bressay_charset.txt"):
-        # Loads model with custom layers and optimizer
-        #(input_data, output_data) = self.architecture()
+        # Loads model's custom layers, optimizer and pretrained weigths
         (input_data, output_data) = self.architecture()
         self.model     = Model(input_data, output_data)
         self.optimizer = NormalizedOptimizer(tf.keras.optimizers.AdamW(learning_rate=0.001, weight_decay=0.1))
@@ -178,36 +176,13 @@ class Bluche(HTRModel):
 
 # TODO: Testes de funcionalidade
 if __name__=='__main__':
-    def preproc(img_list):
-        for index in range(len(img_list)):
-            # Loads, if needed
-            if isinstance(img_list[index], str):
-                img_list[index] = cv2.imread(f'{img_list[index]}', cv2.IMREAD_GRAYSCALE)
-            # Gets background info
-            u, i = np.unique(np.array(img_list[index]).flatten(), return_inverse=True)
-            background = int(u[np.argmax(np.bincount(i))])
-            # Finds max scale factor for no distortion
-            h, w = np.asarray(img_list[index]).shape
-            #print(f'(preproc) Orig shape: h:{h}, w:{w}')
-            wt, ht, _ = 1024, 128, 1
-            f = max((w / wt), (h / ht))
-            new_size = (max(min(wt, int(w/f)), 1), max(min(ht, int(h/f)), 1))
-            # Resizes with no distortion (completes one dimension with background color)
-            img_list[index] = cv2.resize(img_list[index], new_size)
-            target = np.ones([ht, wt], dtype=np.uint8) * background
-            target[0:new_size[1], 0:new_size[0]] = img_list[index]
-            img_list[index] = cv2.transpose(target)
-            # Normalizes image
-            img_list[index] = img_list[index].astype(np.float32)
-            mean  = np.mean(img_list[index])
-            std   = np.std(img_list[index])
-            img_list[index] = (img_list[index] - mean) / std
-        # Treat for bluche model input
-        img_list = np.asarray(img_list).astype(np.float32)
-        return np.expand_dims(img_list, axis=-1)
-    
-    model    = Bluche()
+    # Build model
+    model = Bluche()
     model.model.summary()
-    img      = preproc(['test/model/inputs/line1.png'])
-    predicts = model.predict(img)
-    print(predicts[0])
+    # Build preprocessing
+    import preprocess
+    prep  = preprocess.Bluche()
+    imgs  = prep.process([f'test/model/inputs/line{i+1}.png' for i in range(5)])
+    predicts = model.predict(imgs)
+    for i in range(5):
+        print(f'LINHA {i+1}\n{predicts[0][i]}')

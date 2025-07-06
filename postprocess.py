@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 import re
 import requests
 import language_tool_python
