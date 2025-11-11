@@ -1,8 +1,11 @@
 import os
 from abc import ABC
+from xml.parsers.expat import model
 
 import numpy as np
 import cv2
+
+from metrics import calculate_cer_wer
 
 import tensorflow as tf
 from tensorflow.keras import Model
@@ -11,7 +14,7 @@ from tensorflow.keras.layers import Conv2D, Multiply, Activation
 from tensorflow.keras.layers import Conv2D, Bidirectional, LSTM, Dense
 from tensorflow.keras.layers import Input, Activation, MaxPooling2D, Reshape
 
-# Custom layers / tools 
+# Custom layers / tools
 # Implementation from "Gated convolutional recurrent neural networks for multilingual handwriting recognition".
 class GatedConv2D(Conv2D):
     """Gated Convolutional Class"""
@@ -171,8 +174,24 @@ class Bluche(HTRModel):
         predicts.extend([[[int(p) for p in x if p != -1] for x in y] for y in decode])
         probabilities.extend([np.exp(x) for x in log])
         predicts = [[self.decode(x) for x in y] for y in predicts]
-        return (predicts, probabilities)
+        flat_predicts = [p[0] for p in predicts]
+        return (flat_predicts, probabilities) # Retorna uma lista de strings preditas
 
+    def evaluate(self, image_list, ground_truth_list):
+        """
+        Calcula CER e WER para uma lista de imagens e seus rótulos de verdade.
+        """
+        # 1. Obter as previsões
+        predicted_texts, _ = self.predict(image_list)
+
+        # 2. Aplicar pós-processamento, se houver (ex: removendo tokens especiais)
+        # Note: A decodificação na sua função `predict` já remove "¶" e "¤".
+
+        # 3. Calcular CER e WER (usando as funções definidas acima)
+        # Certifique-se de que ground_truth_list e predicted_texts estejam limpos (sem pontuação excessiva para WER)
+        cer, wer = calculate_cer_wer(ground_truth_list, predicted_texts)
+
+        return cer, wer
 
 # TODO: Testes de funcionalidade
 if __name__=='__main__':
@@ -186,3 +205,34 @@ if __name__=='__main__':
     predicts = model.predict(imgs)
     for i in range(5):
         print(f'LINHA {i+1}\n{predicts[0][i]}')
+
+"""if __name__=='__main__':
+
+    # Exemplo (você precisará obter os ground_truth reais do seu dataset)
+    import preprocess
+    prep = preprocess.Bluche()
+    model = Bluche()
+
+    test_images = [f'test/model/inputs/line{i+1}.png' for i in range(5)]
+    # Supondo que você tenha estas strings de ground truth:
+    ground_truth_texts = [
+        "A frase de teste um.",
+        "A segunda linha para decodificação.",
+        "Outra sentença com escrita manual.",
+        "Um exemplo final de linha.",
+        "Cinco e a última frase."
+    ]
+
+    imgs = prep.process(test_images)
+
+    # 1. Previsões originais (apenas para exibição)
+    predicts, _ = model.predict(imgs)
+    for i, pred in enumerate(predicts):
+        print(f'LINHA {i+1} (GT: "{ground_truth_texts[i]}")\nPRED: {pred}\n')
+
+    # 2. Avaliação usando a nova função
+    cer, wer = model.evaluate(imgs, ground_truth_texts)
+
+    print("\n--- MÉTICAS DE ERRO ---")
+    print(f"Character Error Rate (CER): {cer:.2f}%")
+    print(f"Word Error Rate (WER): {wer:.2f}%") """
