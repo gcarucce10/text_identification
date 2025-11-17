@@ -40,7 +40,18 @@ class GatedConv2D(Conv2D):
 # TODO: get source
 class NormalizedOptimizer(tf.keras.optimizers.Optimizer):
     def __init__(self, optimizer, name='normalized_optimizer', **kwargs):
-        super().__init__(name, **kwargs)
+
+        # 1. FIX: Define lr_variable by getting the learning_rate from the wrapped optimizer
+        lr_variable = optimizer.learning_rate
+
+        # Safely extract the float value and ensure it is a Python float
+        if hasattr(lr_variable, 'numpy'):
+            lr_value = float(lr_variable.numpy())
+        else:
+            lr_value = lr_variable
+
+        super().__init__(name=name, learning_rate=lr_value, **kwargs)
+
         self.optimizer = optimizer
         self._learning_rate = optimizer.learning_rate
 
@@ -130,8 +141,7 @@ class Bluche(HTRModel):
         cnn = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding="same", activation="tanh")(cnn)
         cnn = MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding="valid")(cnn)
 
-        # This was originally "shape = cnn.get_shape()""
-        shape = cnn.get_shape()
+        shape = cnn.shape
         blstm = Reshape((shape[1], shape[2] * shape[3]))(cnn)
 
         blstm = Bidirectional(LSTM(units=128, return_sequences=True))(blstm)
@@ -146,7 +156,9 @@ class Bluche(HTRModel):
         # Loads model's custom layers, optimizer and pretrained weigths
         (input_data, output_data) = self.architecture()
         self.model     = Model(input_data, output_data)
-        self.optimizer = NormalizedOptimizer(tf.keras.optimizers.AdamW(learning_rate=0.001, weight_decay=0.1))
+        self.optimizer = NormalizedOptimizer(
+    tf.keras.optimizers.AdamW(learning_rate=0.001, weight_decay=0.1)
+)
         self.model.compile(optimizer=self.optimizer, loss=ctc_loss_lambda_func)
         self.model.load_weights(weigths_path)
         # Loads model charset for output decoding
@@ -194,7 +206,7 @@ class Bluche(HTRModel):
         return cer, wer
 
 # TODO: Testes de funcionalidade
-if __name__=='__main__':
+"""if __name__=='__main__':
     # Build model
     model = Bluche()
     model.model.summary()
@@ -206,7 +218,8 @@ if __name__=='__main__':
     for i in range(5):
         print(f'LINHA {i+1}\n{predicts[0][i]}')
 
-"""if __name__=='__main__':
+"""
+if __name__=='__main__':
 
     # Exemplo (você precisará obter os ground_truth reais do seu dataset)
     import preprocess
@@ -216,11 +229,11 @@ if __name__=='__main__':
     test_images = [f'test/model/inputs/line{i+1}.png' for i in range(5)]
     # Supondo que você tenha estas strings de ground truth:
     ground_truth_texts = [
-        "A frase de teste um.",
-        "A segunda linha para decodificação.",
-        "Outra sentença com escrita manual.",
-        "Um exemplo final de linha.",
-        "Cinco e a última frase."
+        "reconhecimento igualitário da mulher somente ocorrerão, a longo prazo,",
+        "a partir de quando o feminismo for pensado e discutido nas escolas e",
+        "mídias, fazendo com que todos conscientizem-se sobre o assunto e assim,",
+        "juntamente às opiniões pessoais, os valores nos quais a sociedade se pauta",
+        "adequem-se aos conceitos mais humanitários."
     ]
 
     imgs = prep.process(test_images)
@@ -235,4 +248,4 @@ if __name__=='__main__':
 
     print("\n--- MÉTICAS DE ERRO ---")
     print(f"Character Error Rate (CER): {cer:.2f}%")
-    print(f"Word Error Rate (WER): {wer:.2f}%") """
+    print(f"Word Error Rate (WER): {wer:.2f}%")
