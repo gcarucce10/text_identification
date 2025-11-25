@@ -40,17 +40,11 @@ class GatedConv2D(Conv2D):
 # TODO: get source
 class NormalizedOptimizer(tf.keras.optimizers.Optimizer):
     def __init__(self, optimizer, name='normalized_optimizer', **kwargs):
-
         # 1. FIX: Define lr_variable by getting the learning_rate from the wrapped optimizer
         lr_variable = optimizer.learning_rate
 
-        # Safely extract the float value and ensure it is a Python float
-        if hasattr(lr_variable, 'numpy'):
-            lr_value = float(lr_variable.numpy())
-        else:
-            lr_value = lr_variable
-
-        super().__init__(name=name, learning_rate=lr_value, **kwargs)
+        # O argumento learning_rate deve ser manipulado apenas pelo otimizador interno.
+        super().__init__(name=name, **kwargs)
 
         self.optimizer = optimizer
         self._learning_rate = optimizer.learning_rate
