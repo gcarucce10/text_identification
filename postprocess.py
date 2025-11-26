@@ -1,103 +1,89 @@
 import os
-from abc import ABC
 import re
 import requests
-import language_tool_python
+from autocorrect import Speller
 
-# Initializes local LanguageTool for pt-BR 
-tool = language_tool_python.LanguageTool('pt-BR')
-
-# Loads simple word dictionary (pt‑BR words)
-with open('resources/palavras_ptbr.txt', encoding='utf-8') as f:
-    valid_words = set(line.strip().lower() for line in f if line.strip())
-
-# 1. Function for correcting with LanguageTool
-def correct_lt(text: str) -> str:
-    matches = tool.check(text)
-    return language_tool_python.utils.correct(text, matches)
-
-# 2. Detects existence of meaningful errors
-def needs_gemini(text: str) -> bool:
-    # 1. If LT didn't detect residual errors
-    if tool.check(text):
-        return True
-
-    # 2. If unknown words exist
-    for w in text.split():
-        w_clean = w.lower().strip('.,;:!?')
-        if w_clean.isalpha() and w_clean not in valid_words:
-            return True
-
-    # 3. Suspect OCR patterns (dupped letter)
-    if re.search(r'\b\w*(\w)\1{2,}\w*\b', text):
-        return True
-
-    return False
-
-# 3. Calls Gemini via REST (no SDK)
-def correct_with_gemini(texto: str) -> str:
-    prompt = (
-        "Você é um corretor profissional de português brasileiro (pt-BR).\n"
-        "Corrija apenas ortografia, acentuação e gramática da frase abaixo.\n"
-        "Responda somente com a frase corrigida, sem explicações.\n\n"
-        f'Frase: "{texto}"'
-    )
-
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.5-flash:generateContent"
-    )
-    headers = {"Content-Type": "application/json"}
-    params = {"key": os.getenv("GEMINI_API_KEY")}
-    body = {
-        "contents": [
-            { "parts": [ { "text": prompt } ] }
-        ]
-    }
-
-    resp = requests.post(url, headers=headers, params=params, json=body)
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-
-# 4. Hybrid correcting function (LanguageTool and, if needed, Gemini)
-def correct_hybrid(texto: str) -> str:
-    lt = correct_lt(texto)
-    #print("Texto corrigido pelo LanguageTool:", lt)
-    if needs_gemini(lt):
-        #print("Precisou de correção adicional com Gemini.")
-        return correct_with_gemini(lt)
-    return lt
+# Disables tensorflow usual debbug messages
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-class HTRPostprocessing:
-    # Dictionary of process() method for easy selecting
-    method_dict = {
-        "dict":   correct_lt,
-        "llm":    correct_with_gemini,
-        "hybrid": correct_hybrid
-    }
+
+#==============================================================================================================
+# CUSTOM CLASSES FOR PERFORMING POSTPROCESSING
+# Class for autocorrect library
+class Autocorrect():
+    def __init__(self, language='pt'):
+        self.spell = Speller(language, only_replacements=True)
     
-    def __init__(self, method="hybrid"):
-        self.postprocessor = self.method_dict[method]
+    def preprocess(self, text):
+        return text
+    
+    def correct(self, text):
+        return self.spell(text)
 
-    # 
-    def process(self, text_list):
-        return [self.postprocessor(text) for text in text_list]
+# Class for gemini API
+class GEMINI_API():
+    def __init__(self, API_key = None, prompt = None, URL = None, headers = None, params = None):
+        if API_key == None:
+            API_key = os.getenv("GEMINI_API_KEY")  # Google comments this
+        self.API_key = API_key
+
+        if prompt == None:
+            prompt = (
+                "Você é um corretor profissional de português brasileiro (pt-BR).\n"
+                "Corrija apenas ortografia, acentuação e gramática da frase abaixo, "
+                "respondendo somente com a frase corrigida, sem explicações\n\n"
+            )
+        self.prompt = prompt
+
+        if URL == None:
+            URL = (
+                "https://generativelanguage.googleapis.com/v1beta/"
+                "models/gemini-2.5-flash:generateContent"
+            )
+        self.URL = URL
+
+        if headers == None:
+            headers = {"Content-Type": "application/json"}
+        self.headers = headers
+
+        if params == None:
+            params = {"key": self.API_key}
+        self.params = params
+
+    def preprocess(self, text):
+        return text
+
+    def correct(self, text):
+        body = {
+            "contents": [
+                { "parts": [ { "text": self.prompt + f'Frase: "{text}"' } ] }
+            ]
+        }
+        resp = requests.post(self.URL, headers=self.headers, params=self.params, json=body)
+        resp.raise_for_status()
+        return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+#==============================================================================================================
 
 
-# Functionality tests
+
+#==============================================================================================================
+# POSTPROCESS CLASSES DICTIONARY FOR EASY REFERENCING
+postprocess_dict = {
+    'auto': Autocorrect,
+    'gemini': GEMINI_API
+}
+#==============================================================================================================
+
+
+
+# Unit tests for postprocess.py
 if __name__ == "__main__":
-    def carregar_frases(caminho_arquivo):
-        with open(caminho_arquivo, "r", encoding="utf-8") as f:
-            # Lê todas as linhas, remove espaços em excesso e aspas
-            return [linha.strip().strip('"') for linha in f if linha.strip()]
-
-    teste = "do pópio moda. É evidento que embora a situaçãeo esteja melhor em"
-    print("Texto original:", teste)
-    print("Texto corrigido:", correct_hybrid(teste))
-    
-    # testes = carregar_frases("teste.txt")
-    
-    # for t in testes:
-    #     print("Antes:", t)
-    #     print("Depois:", corrigir_hibrido(t), "\n")
+    for key, value in postprocess_dict.items():
+        model = value()
+        for i in range(29):        
+            with open(f'tests/postprocess/inputs/line{i}.txt','r') as f:
+                text = f.read()
+            with open(f'tests/postprocess/outputs/{key}-line{i}.txt','w') as f:
+                f.write(model.correct(model.preprocess(text)))
