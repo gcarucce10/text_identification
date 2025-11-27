@@ -143,11 +143,8 @@ HTR_dict = {
 
 # Unit tests for HTR.py
 if __name__=='__main__':
-    # Build model
-    model = Bluche_BRESSAY()
-    #model.model.summary()
-    # Performs preprocesing + prediction
-    imgs = [f'tests/HTR/inputs/line{i}.png' for i in range(29)]
-    for i, img in enumerate(imgs):
-        with open(f'tests/HTR/outputs/line{i}.txt', 'w') as f:
-            f.write(model.predict(model.preprocess(img))) 
+    for key, value in HTR_dict.items():
+        model = value()
+        for i in range(13):  
+            with open(f'tests/HTR/outputs/{key}-linha{i}.txt', 'w') as f:
+                f.write(model.predict(model.preprocess(f'tests/HTR/inputs/linha{i}.png')))

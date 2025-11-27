@@ -30,10 +30,14 @@ class GEMINI_API():
         self.API_key = API_key
 
         if prompt == None:
+            #prompt = (
+            #    "Você é um corretor profissional de português brasileiro (pt-BR).\n"
+            #    "Corrija apenas ortografia, acentuação e gramática da frase abaixo, "
+            #    "respondendo somente com a frase corrigida, sem explicações\n\n"
+            #)
             prompt = (
-                "Você é um corretor profissional de português brasileiro (pt-BR).\n"
-                "Corrija apenas ortografia, acentuação e gramática da frase abaixo, "
-                "respondendo somente com a frase corrigida, sem explicações\n\n"
+                "Performe OCR (optimal character recognition) na frase abaixo, em português"
+                "pt-BR, respondendo somente com a frase corrigida, sem explicações\n\n"
             )
         self.prompt = prompt
 
@@ -58,7 +62,7 @@ class GEMINI_API():
     def correct(self, text):
         body = {
             "contents": [
-                { "parts": [ { "text": self.prompt + f'Frase: "{text}"' } ] }
+                { "parts": [ { "text": self.prompt + text } ] }
             ]
         }
         resp = requests.post(self.URL, headers=self.headers, params=self.params, json=body)
@@ -82,8 +86,8 @@ postprocess_dict = {
 if __name__ == "__main__":
     for key, value in postprocess_dict.items():
         model = value()
-        for i in range(29):        
-            with open(f'tests/postprocess/inputs/line{i}.txt','r') as f:
+        for i in range(11):        
+            with open(f'tests/postprocess/inputs/linha{i}.txt','r') as f:
                 text = f.read()
-            with open(f'tests/postprocess/outputs/{key}-line{i}.txt','w') as f:
+            with open(f'tests/postprocess/outputs/{key}-linha{i}.txt','w') as f:
                 f.write(model.correct(model.preprocess(text)))

@@ -51,7 +51,9 @@ lineseg_dict = {
 
 # Unit tests for lineseg.py
 if __name__=='__main__':
-    img = 'tests/lineseg/inputs/carucce.jpeg'
-    lineseg = Irina()
-    for i, line in enumerate(lineseg.segment(lineseg.preprocess(img))):
-        cv2.imwrite(f'tests/lineseg/outputs/line{i}.png',line)
+    for key, value in lineseg_dict.items():
+        model = value()       
+        img = 'tests/lineseg/inputs/pedra.jpeg'
+        lines = model.segment(model.preprocess(img))
+        for i, line in enumerate(lines):
+            cv2.imwrite(f'tests/lineseg/outputs/{key}-linha{i}.png',line)

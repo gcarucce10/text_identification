@@ -57,6 +57,6 @@ pipeline_dict = {
 # Unit tests for HTR.py
 if __name__=="__main__":
     pipeline = line_level_pipeline('irina', 'bluche', 'gemini')
-    text = pipeline.run(['tests/pipeline/inputs/paragraph.png'])
+    text = pipeline.run(['tests/pipeline/inputs/pedra.jpeg'])
     with open(f'tests/pipeline/outputs/paragraph.txt', 'w') as f:
         f.write(text[0])
